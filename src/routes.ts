@@ -1,9 +1,10 @@
 import { IncomingMessage, ServerResponse } from 'http';
 import { db } from './db';
 import { sendResponse } from './utils';
+import { User } from './types';
 
 export const handleRequest = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
-  const [_, api, resource, id] = req.url?.split('/') || [];
+  const [_, api, resource, id]: string[] = req.url?.split('/') || [];
 
   console.log(`worker ${process.pid} handled the request on port: ${process.env.PORT}`);
 
@@ -40,7 +41,7 @@ export const handleRequest = async (req: IncomingMessage, res: ServerResponse): 
           return;
         }
         const newUser = db.createUser(username, age, hobbies);
-        process.send?.({ type: 'update', data: db.getAllUsers() });
+        process.send?.({ data: db.getAllUsers() });
         sendResponse(res, { status: 201, message: 'User created', data: newUser });
       });
     } else if (req.method === 'PUT') {
@@ -56,7 +57,7 @@ export const handleRequest = async (req: IncomingMessage, res: ServerResponse): 
 
         const updatedUser = db.updateUser(id, username, age, hobbies);
         if (updatedUser) {
-          process.send?.({ type: 'update', data: db.getAllUsers() });
+          process.send?.({ data: db.getAllUsers() });
           sendResponse(res, { status: 200, message: 'User updated', data: updatedUser });
         } else {
           sendResponse(res, { status: 404, message: 'User not found' });
@@ -66,7 +67,7 @@ export const handleRequest = async (req: IncomingMessage, res: ServerResponse): 
 
       const isDeleted = db.deleteUser(id);
       if (isDeleted) {
-        process.send?.({ type: 'update', data: db.getAllUsers() });
+        process.send?.({ data: db.getAllUsers() });
         sendResponse(res, { status: 204, message: 'User deleted' });
       } else {
         sendResponse(res, { status: 404, message: 'User not found' });

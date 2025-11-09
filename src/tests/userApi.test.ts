@@ -37,7 +37,6 @@ describe('User API', () => {
 
   it('should update the created user', async () => {
     const updatedUser = {
-      id:userId,
       username: 'Jane Doe',
       age: 25,
       hobbies: ['traveling'],

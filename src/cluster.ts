@@ -1,15 +1,16 @@
 import cluster from 'cluster';
 import os from 'os';
-import http from 'http';
+import http, { IncomingMessage, ServerResponse } from 'http';
 import { handleRequest } from './routes';
 import { portOffset } from './utils';
 import { db } from './db';
+import { type UpdateMessage } from './types';
 
 const PORT = parseInt(process.env.PORT || '4000', 10);
-let workerport = 4000;
+let workerport: number = 4000;
 
 if (cluster.isPrimary) {
-  const numCPUs = os.availableParallelism();
+  const numCPUs: number = os.availableParallelism();
   console.log(`Master process is running. Forking ${numCPUs - 1} workers...`);
 
   for (let i = 0; i < numCPUs - 1; i++) {
@@ -19,16 +20,14 @@ if (cluster.isPrimary) {
   const workers = Object.values(cluster.workers || {});
 
   cluster.on('message', (worker, message) => {
-    if (message.type === 'update') {
       workers.forEach((w) => {
         if (w !== worker) {
           w?.send(message);
         }
       });
-    }
   });
 
-  const loadBalancer = http.createServer((req, res) => {
+  const loadBalancer = http.createServer((req: IncomingMessage, res: ServerResponse) => {
 
     const options = {
       hostname: 'localhost',
@@ -38,7 +37,7 @@ if (cluster.isPrimary) {
       headers: req.headers
     };
 
-    const requestToWorker = http.request(options, (responseFromWorker) => {
+    const requestToWorker = http.request(options, (responseFromWorker: IncomingMessage) => {
       res.writeHead(responseFromWorker.statusCode || 500, responseFromWorker.headers);
       responseFromWorker.pipe(res);
     });
@@ -51,10 +50,8 @@ if (cluster.isPrimary) {
   });
 
 } else {
-  process.on('message', (message: any) => {
-    if (message.type === 'update') {
+  process.on('message', (message: UpdateMessage) => {
       db.setUsers(message.data);
-    }
   });
 
   const port = process.env.PORT;

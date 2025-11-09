@@ -10,3 +10,7 @@ export interface ApiResponse {
   message: string;
   data?: any;
 }
+
+export interface UpdateMessage {
+  data: User[];
+}
