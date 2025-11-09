@@ -1,10 +1,19 @@
 import { type User } from './types';
 import { randomUUID } from 'crypto';
 
-const users: User[] = [];
+let users: User[] = [];
 
 export const db = {
+  
+  setUsers: (newUsers: User[]): void => {
+    users = newUsers;
+  },
+
   getAllUsers: (): User[] => users,
+
+  getUserByUsername: (username: string): boolean => {
+    return users.some(user => user.username === username);
+  },
 
   getUserById: (id: string): User | undefined => users.find(user => user.id === id),
 
