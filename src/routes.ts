@@ -48,7 +48,7 @@ export const handleRequest = async (req: IncomingMessage, res: ServerResponse): 
       let body = '';
       req.on('data', chunk => { body += chunk; });
       req.on('end', () => {
-        const { id, username, age, hobbies } = JSON.parse(body);
+        const { username, age, hobbies } = JSON.parse(body);
         if (!username || !age || !Array.isArray(hobbies)) {
           sendResponse(res, { status: 400, message: 'Invalid request body' });
           return;
