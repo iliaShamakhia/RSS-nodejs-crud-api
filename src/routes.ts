@@ -5,6 +5,8 @@ import { isValidUuid, sendResponse } from './utils';
 export const handleRequest = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
   const [_, api, resource, id] = req.url?.split('/') || [];
 
+  console.log(`worker ${process.pid} handled the request on port: ${process.env.PORT}`);
+
   if (api !== 'api' || !resource) {
     sendResponse(res, { status: 404, message: 'Endpoint not found' });
     return;

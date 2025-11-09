@@ -11,9 +11,8 @@
     "resolveJsonModule": true,
     "outDir": "./dist",
     "rootDir": "./src",
-    "noEmit": true,
+    "noEmit": false,
     "types": ["node", "jest"],
-    "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "incremental": true
   },
