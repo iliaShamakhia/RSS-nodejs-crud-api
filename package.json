@@ -1,0 +1,31 @@
+{
+  "name": "rss-nodejs-crud-api",
+  "version": "1.0.0",
+  "description": "crud api with nodejs",
+  "main": "dist/index.js",
+  "scripts": {
+    "start:dev": "nodemon src/index.ts",
+    "start:prod": "webpack && node dist/bundle.js",
+    "start:multi": "ts-node src/cluster.ts",
+    "test": "jest",
+    "build": "tsc"
+  },
+  "author": "ilia-shamakhia",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.10.0",
+    "@types/supertest": "^6.0.3",
+    "dotenv": "^17.2.3",
+    "jest": "^30.2.0",
+    "nodemon": "^3.1.10",
+    "supertest": "^7.1.4",
+    "ts-jest": "^29.4.5",
+    "ts-loader": "^9.5.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "webpack": "^5.102.1",
+    "webpack-cli": "^6.0.1",
+    "webpack-node-externals": "^3.0.0"
+  }
+}
