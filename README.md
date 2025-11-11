@@ -5,6 +5,14 @@
 - Node.js (recommended v18+)
 - npm (bundled with Node) or yarn
 
+## Clone Project
+
+git clone https://github.com/iliaShamakhia/RSS-nodejs-crud-api.git
+
+cd RSS-nodejs-crud-api
+
+git checkout rss-nodejs-crud-api
+
 ## Install
 
 Open a terminal in the project root (Windows PowerShell or CMD):

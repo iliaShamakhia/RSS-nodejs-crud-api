@@ -1,6 +1,6 @@
 import { IncomingMessage, ServerResponse } from 'http';
 import { db } from './db';
-import { sendResponse } from './utils';
+import { isIdValid, isUrlValid, isUserDataValid, sendResponse } from './utils';
 import { User } from './types';
 
 export const handleRequest = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
@@ -8,8 +8,13 @@ export const handleRequest = async (req: IncomingMessage, res: ServerResponse): 
 
   console.log(`worker ${process.pid} handled the request on port: ${process.env.PORT}`);
 
-  if (api !== 'api' || !resource) {
+  if (api !== 'api' || !resource || !isUrlValid(req.url || '')) {
     sendResponse(res, { status: 404, message: 'Endpoint not found' });
+    return;
+  }
+
+  if (id && !isIdValid(id)) {
+    sendResponse(res, { status: 400, message: 'Invalid UUID format' });
     return;
   }
 
@@ -29,38 +34,45 @@ export const handleRequest = async (req: IncomingMessage, res: ServerResponse): 
       let body = '';
       req.on('data', chunk => { body += chunk; });
       req.on('end', () => {
-        const { username, age, hobbies } = JSON.parse(body);
-        if (!username || !age || !Array.isArray(hobbies)) {
-          sendResponse(res, { status: 400, message: 'Invalid request body' });
-          return;
-        }
-        const usernameExists = db.getUserByUsername(username);
+        try{
+          const { username, age, hobbies } = JSON.parse(body);
+          if (!username || !age || !Array.isArray(hobbies) || !isUserDataValid({username, age, hobbies} as User)) {
+            sendResponse(res, { status: 400, message: 'Invalid request body' });
+            return;
+          }
+          const usernameExists = db.getUserByUsername(username);
 
-        if (usernameExists) {
-          sendResponse(res, { status: 409, message: 'User already exists' });
-          return;
+          if (usernameExists) {
+            sendResponse(res, { status: 409, message: 'User already exists' });
+            return;
+          }
+          const newUser = db.createUser(username, age, hobbies);
+          process.send?.({ data: db.getAllUsers() });
+          sendResponse(res, { status: 201, message: 'User created', data: newUser });
+        }catch{
+          sendResponse(res, { status: 400, message: 'Invalid request body' });
         }
-        const newUser = db.createUser(username, age, hobbies);
-        process.send?.({ data: db.getAllUsers() });
-        sendResponse(res, { status: 201, message: 'User created', data: newUser });
       });
     } else if (req.method === 'PUT') {
-
       let body = '';
       req.on('data', chunk => { body += chunk; });
       req.on('end', () => {
-        const { username, age, hobbies } = JSON.parse(body);
-        if (!username || !age || !Array.isArray(hobbies)) {
-          sendResponse(res, { status: 400, message: 'Invalid request body' });
-          return;
-        }
+        try{
+          const { username, age, hobbies } = JSON.parse(body);
+          if (!username || !age || !Array.isArray(hobbies) || !isUserDataValid({username, age, hobbies} as User)) {
+            sendResponse(res, { status: 400, message: 'Invalid request body' });
+            return;
+          }
 
-        const updatedUser = db.updateUser(id, username, age, hobbies);
-        if (updatedUser) {
-          process.send?.({ data: db.getAllUsers() });
-          sendResponse(res, { status: 200, message: 'User updated', data: updatedUser });
-        } else {
-          sendResponse(res, { status: 404, message: 'User not found' });
+          const updatedUser = db.updateUser(id, username, age, hobbies);
+          if (updatedUser) {
+            process.send?.({ data: db.getAllUsers() });
+            sendResponse(res, { status: 200, message: 'User updated', data: updatedUser });
+          } else {
+            sendResponse(res, { status: 404, message: 'User not found' });
+          }
+        }catch{
+          sendResponse(res, { status: 400, message: 'Invalid request body' });
         }
       });
     } else if (req.method === 'DELETE') {
