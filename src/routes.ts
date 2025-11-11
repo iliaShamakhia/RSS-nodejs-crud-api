@@ -1,7 +1,20 @@
 import { IncomingMessage, ServerResponse } from 'http';
 import { db } from './db';
 import { isIdValid, isUrlValid, isUserDataValid, sendResponse } from './utils';
-import { User } from './types';
+import { operationType, UpdateMessage, User } from './types';
+
+export const handleOperation = (type: operationType, id?: string, data?: User) => {
+  return new Promise<UpdateMessage>(((resolve, reject)=>{
+    process.send?.({ type, userId: id, data });
+    process.on('message', (message: UpdateMessage) => {
+      resolve(message);
+      process.removeAllListeners('message');
+    });
+    process.on('error', (error) => {
+      reject(error);
+    });
+  }))
+}
 
 export const handleRequest = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
   const [_, api, resource, id]: string[] = req.url?.split('/') || [];
@@ -21,10 +34,11 @@ export const handleRequest = async (req: IncomingMessage, res: ServerResponse): 
   try {
     if (req.method === 'GET') {
       if (resource === 'users' && !id) {
-        sendResponse(res, { status: 200, message: 'Success', data: db.getAllUsers() });
+        const users = await handleOperation('getMany', undefined, undefined);
+        sendResponse(res, { status: 200, message: 'Success', data: users });
       } else {
-        const user = db.getUserById(id);
-        if (user) {
+        const user = await handleOperation('getSingle', id, undefined);
+        if (user.status === 'success') {
           sendResponse(res, { status: 200, message: 'Success', data: user });
         } else {
           sendResponse(res, { status: 404, message: 'User not found' });
@@ -33,21 +47,19 @@ export const handleRequest = async (req: IncomingMessage, res: ServerResponse): 
     } else if (req.method === 'POST') {
       let body = '';
       req.on('data', chunk => { body += chunk; });
-      req.on('end', () => {
+      req.on('end', async () => {
         try{
           const { username, age, hobbies } = JSON.parse(body);
           if (!username || !age || !Array.isArray(hobbies) || !isUserDataValid({username, age, hobbies} as User)) {
             sendResponse(res, { status: 400, message: 'Invalid request body' });
             return;
           }
-          const usernameExists = db.getUserByUsername(username);
-
-          if (usernameExists) {
+          const usernameExists = await handleOperation('user-exists', undefined, { username, age, hobbies});
+          if (usernameExists.status === 'success') {
             sendResponse(res, { status: 409, message: 'User already exists' });
             return;
           }
-          const newUser = db.createUser(username, age, hobbies);
-          process.send?.({ data: db.getAllUsers() });
+          const newUser = await handleOperation('create', undefined, { username, age, hobbies});
           sendResponse(res, { status: 201, message: 'User created', data: newUser });
         }catch{
           sendResponse(res, { status: 400, message: 'Invalid request body' });
@@ -56,17 +68,15 @@ export const handleRequest = async (req: IncomingMessage, res: ServerResponse): 
     } else if (req.method === 'PUT') {
       let body = '';
       req.on('data', chunk => { body += chunk; });
-      req.on('end', () => {
+      req.on('end', async () => {
         try{
           const { username, age, hobbies } = JSON.parse(body);
           if (!username || !age || !Array.isArray(hobbies) || !isUserDataValid({username, age, hobbies} as User)) {
             sendResponse(res, { status: 400, message: 'Invalid request body' });
             return;
           }
-
-          const updatedUser = db.updateUser(id, username, age, hobbies);
-          if (updatedUser) {
-            process.send?.({ data: db.getAllUsers() });
+          const updatedUser = await handleOperation('update', id, { username, age, hobbies});
+          if (updatedUser.status == 'success') {
             sendResponse(res, { status: 200, message: 'User updated', data: updatedUser });
           } else {
             sendResponse(res, { status: 404, message: 'User not found' });
@@ -76,10 +86,8 @@ export const handleRequest = async (req: IncomingMessage, res: ServerResponse): 
         }
       });
     } else if (req.method === 'DELETE') {
-
-      const isDeleted = db.deleteUser(id);
-      if (isDeleted) {
-        process.send?.({ data: db.getAllUsers() });
+      const isDeleted = await handleOperation('delete', id, undefined);
+      if (isDeleted.status === 'success') {
         sendResponse(res, { status: 204, message: 'User deleted' });
       } else {
         sendResponse(res, { status: 404, message: 'User not found' });

@@ -12,7 +12,7 @@ export const db = {
   getAllUsers: (): User[] => users,
 
   getUserByUsername: (username: string): boolean => {
-    return users.some(user => user.username === username);
+    return users?.some(user => user.username === username);
   },
 
   getUserById: (id: string): User | undefined => users.find(user => user.id === id),
